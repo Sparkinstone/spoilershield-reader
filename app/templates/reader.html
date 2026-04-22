@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}SpoilerShield - {{ book.title }}{% endblock %}
+{% block content %}
+<div class="flex gap-6 h-[calc(100vh-80px)]">
+    <!-- Left: Book text -->
+    <div class="w-1/2 overflow-y-auto bg-white shadow rounded-lg p-6" id="book-text">
+        <h2 class="text-xl font-bold mb-4">{{ book.title }}</h2>
+        <div id="paragraphs">
+            {% for para in paragraphs %}
+            <div class="paragraph-block mb-4 p-3 rounded cursor-pointer hover:bg-indigo-50 transition"
+                 id="para-{{ para.para_index }}"
+                 hx-get="/book/{{ book.id }}/comments/{{ para.para_index }}"
+                 hx-target="#comment-sidebar"
+                 hx-swap="innerHTML"
+                 onclick="selectParagraph({{ para.para_index }})">
+                {% if para.page_num %}
+                <span class="text-xs text-gray-400 mr-2">p.{{ para.page_num }}</span>
+                {% endif %}
+                <span class="text-sm text-gray-500 mr-2">[{{ para.para_index }}]</span>
+                <p class="text-gray-800 leading-relaxed">{{ para.content }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Right: Comment sidebar -->
+    <div class="w-1/2 overflow-y-auto bg-white shadow rounded-lg p-6" id="comment-sidebar">
+        <div class="text-center text-gray-400 mt-20">
+            <p>Click a paragraph to see comments</p>
+        </div>
+    </div>
+</div>
+
+<!-- Global spoiler toggle -->
+<div class="fixed bottom-4 right-4">
+    <button id="spoiler-toggle" onclick="toggleAllSpoilers()"
+            class="bg-gray-800 text-white px-4 py-2 rounded shadow hover:bg-gray-700">
+        Show All Spoilers
+    </button>
+</div>
+
+<script>
+let spoilersVisible = false;
+
+function selectParagraph(index) {
+    document.querySelectorAll('.paragraph-block').forEach(el => el.classList.remove('bg-indigo-100'));
+    document.getElementById('para-' + index).classList.add('bg-indigo-100');
+}
+
+function toggleAllSpoilers() {
+    spoilersVisible = !spoilersVisible;
+    const btn = document.getElementById('spoiler-toggle');
+    btn.textContent = spoilersVisible ? 'Hide All Spoilers' : 'Show All Spoilers';
+    document.querySelectorAll('.spoiler-blur').forEach(el => {
+        if (spoilersVisible) el.classList.add('revealed');
+        else el.classList.remove('revealed');
+    });
+    document.querySelectorAll('.overlay-text').forEach(el => {
+        el.style.display = spoilersVisible ? 'none' : '';
+    });
+}
+
+function revealSpoiler(el) {
+    el.parentElement.querySelector('.spoiler-blur').classList.add('revealed');
+    el.style.display = 'none';
+}
+</script>
+{% endblock %}

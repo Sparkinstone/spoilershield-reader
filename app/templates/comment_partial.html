@@ -1,0 +1,46 @@
+<div>
+    <h3 class="text-lg font-semibold mb-2">
+        Comments on Paragraph {{ para_index }}
+    </h3>
+
+    <div id="comment-list" class="space-y-3 mb-6">
+        {% for comment in comments %}
+        <div class="border rounded p-3">
+            {% if comment.status == "HIDDEN" %}
+            <div class="spoiler-overlay">
+                <div class="spoiler-blur">{{ comment.content }}</div>
+                <span class="overlay-text" onclick="revealSpoiler(this)">Click to reveal spoiler</span>
+            </div>
+            <div class="mt-1 text-xs text-red-500">
+                AI: spoiler (confidence: {{ comment.confidence }}) — {{ comment.ai_reason }}
+            </div>
+            {% elif comment.status == "PENDING_REVIEW" %}
+            <div class="bg-yellow-50 border-yellow-200 rounded p-2">
+                <p class="text-yellow-800">{{ comment.content }}</p>
+                <p class="text-xs text-yellow-600 mt-1">
+                    Pending review (confidence: {{ comment.confidence }}) — {{ comment.ai_reason }}
+                </p>
+            </div>
+            {% else %}
+            <p class="text-gray-800">{{ comment.content }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% if not comments %}
+        <p class="text-gray-400 text-sm">No comments yet.</p>
+        {% endif %}
+    </div>
+
+    <form hx-post="/comment" hx-target="#comment-sidebar" hx-swap="innerHTML"
+          class="space-y-3">
+        <input type="hidden" name="book_id" value="{{ book_id }}">
+        <input type="hidden" name="para_index" value="{{ para_index }}">
+        <textarea name="content" rows="3" required
+                  class="w-full border rounded px-3 py-2 focus:ring-indigo-500"
+                  placeholder="Write your comment..."></textarea>
+        <button type="submit"
+                class="bg-indigo-600 text-white rounded px-4 py-2 hover:bg-indigo-700">
+            Post Comment
+        </button>
+    </form>
+</div>

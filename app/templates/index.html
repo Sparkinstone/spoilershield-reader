@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}SpoilerShield - Upload{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <h1 class="text-2xl font-bold mb-6 text-center">Upload a Book</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data"
+          class="bg-white shadow rounded-lg p-6 space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Book Title</label>
+            <input type="text" name="title" required
+                   class="w-full border rounded px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">File (PDF, EPUB, TXT)</label>
+            <input type="file" name="file" accept=".pdf,.epub,.txt" required
+                   class="w-full border rounded px-3 py-2">
+        </div>
+        <button type="submit"
+                class="w-full bg-indigo-600 text-white rounded px-4 py-2 hover:bg-indigo-700">
+            Upload & Parse
+        </button>
+    </form>
+    {% if books %}
+    <div class="mt-8">
+        <h2 class="text-lg font-semibold mb-3">Your Books</h2>
+        <ul class="space-y-2">
+            {% for book in books %}
+            <li class="bg-white shadow rounded p-3 flex justify-between items-center">
+                <span>{{ book.title }} ({{ book.file_type }})</span>
+                <a href="/book/{{ book.id }}" class="text-indigo-600 hover:underline">Read</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
