@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}SpoilerShield - Admin{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto mt-6">
+    <h1 class="text-2xl font-bold mb-6">Admin Panel — Pending Review Comments</h1>
+
+    {% if comments %}
+    <div class="space-y-4">
+        {% for comment in comments %}
+        <div class="bg-white shadow rounded-lg p-4">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-sm text-gray-500">
+                    Book: {{ comment.book.title }} | Paragraph #{{ comment.paragraph.para_index }}
+                </span>
+                <span class="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">
+                    Pending Review
+                </span>
+            </div>
+
+            <p class="text-gray-800 mb-2">{{ comment.content }}</p>
+
+            <div class="bg-gray-50 rounded p-2 mb-3 text-sm">
+                <p><strong>AI Judgment:</strong> {{ "Spoiler" if comment.is_spoiler else "Non-spoiler" }}</p>
+                <p><strong>Confidence:</strong> {{ comment.confidence }}</p>
+                <p><strong>Reason:</strong> {{ comment.ai_reason }}</p>
+            </div>
+
+            <div class="flex gap-2">
+                <form hx-post="/admin/action" hx-target="body" hx-swap="innerHTML" class="inline">
+                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">
+                        Approve (Public)
+                    </button>
+                </form>
+                <form hx-post="/admin/action" hx-target="body" hx-swap="innerHTML" class="inline">
+                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                    <input type="hidden" name="action" value="mark_spoiler">
+                    <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">
+                        Mark as Spoiler
+                    </button>
+                </form>
+                <form hx-post="/admin/action" hx-target="body" hx-swap="innerHTML" class="inline">
+                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700">
+                        Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-center mt-10">No pending review comments.</p>
+    {% endif %}
+</div>
+{% endblock %}
