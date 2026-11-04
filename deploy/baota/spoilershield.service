@@ -1,0 +1,42 @@
+# SpoilerShield on 宝塔面板 (OpenCloudOS 9, textadventure.top)
+#
+# 适用：宝塔 Linux 面板 11.4.x / OpenCloudOS 9 / 已用面板 Nginx 监听 80/443。
+# 应用只监听 127.0.0.1:8000，由宝塔 Nginx 反代；不要用 Caddy/80 端口。
+#
+# 安装：
+#   cp deploy/baota/spoilershield.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now spoilershield
+#
+# .env 由应用自己加载（python-dotenv）；这里不写 EnvironmentFile，避免
+# 密码里的空格/引号被 systemd 解析坏。
+
+[Unit]
+Description=SpoilerShield (textadventure.top)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=spoilershield
+Group=spoilershield
+WorkingDirectory=/www/wwwroot/textadventure.top
+
+Environment=PYTHONUNBUFFERED=1
+Environment=HF_HOME=/www/wwwroot/textadventure.top/models
+
+ExecStart=/www/wwwroot/textadventure.top/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8000 --workers 1 \
+    --proxy-headers --forwarded-allow-ips=127.0.0.1
+
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+# 宝塔 + Docker 的备选方案：只跑应用容器，80/443 仍由宝塔 Nginx 负责。
+#
+# 用法（在项目根目录）：
+#   docker compose -f deploy/baota/docker-compose.app.yml up -d --build
+#
+# 前置：
+#   - 宝塔已安装 Docker（软件商店 → Docker）；
+#   - 项目根目录有 .env（域名、LLM key、ADMIN_PASSWORD 等）；
+#   - 宝塔 Nginx 反代 http://127.0.0.1:8000。
+#
+# 适用场景：OpenCloudOS 上没有合适的 Python 3.11/3.12，
+# 或不想在宿主机装 torch。
+
+name: spoilershield-baota
+
+services:
+  app:
+    build:
+      context: ../..
+    image: spoilershield:latest
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      DATABASE_URL: sqlite:////data/spoiler_shield.db
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - app-data:/data
+
+volumes:
+  app-data:

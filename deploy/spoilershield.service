@@ -1,0 +1,44 @@
+# SpoilerShield — systemd unit for a bare Ubuntu/Debian deployment.
+# Install to /etc/systemd/system/spoilershield.service, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now spoilershield
+#
+# Layout assumed:
+#   /opt/spoilershield        code + .venv + .env
+#   /var/lib/spoilershield    SQLite database + uploaded files (StateDirectory)
+#
+# Put these two lines in /opt/spoilershield/.env:
+#   DATABASE_URL=sqlite:////var/lib/spoilershield/spoiler_shield.db
+#   UPLOAD_DIR=/var/lib/spoilershield/uploads
+
+[Unit]
+Description=SpoilerShield
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=spoilershield
+Group=spoilershield
+WorkingDirectory=/opt/spoilershield
+# The app loads /opt/spoilershield/.env itself via python-dotenv; no
+# EnvironmentFile= is needed (and .env values with quotes/spaces stay intact).
+ExecStart=/opt/spoilershield/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8000 --workers 1 \
+    --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+
+# Only the state directory is writable; the code tree stays read-only.
+StateDirectory=spoilershield
+StateDirectoryMode=0750
+ReadWritePaths=/var/lib/spoilershield
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

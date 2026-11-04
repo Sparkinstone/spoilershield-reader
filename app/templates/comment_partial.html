@@ -1,46 +1,51 @@
-<div>
-    <h3 class="text-lg font-semibold mb-2">
-        Comments on Paragraph {{ para_index }}
-    </h3>
+<div class="comments" data-comment-panel>
+    <p class="comments__eyebrow">第 {{ para_index + 1 }} 段</p>
 
-    <div id="comment-list" class="space-y-3 mb-6">
+    {% if ai_error %}
+    <div class="notice notice--warn" role="status">{{ ai_error }}</div>
+    {% endif %}
+
+    <div class="comment-list">
         {% for comment in comments %}
-        <div class="border rounded p-3">
             {% if comment.status == "HIDDEN" %}
-            <div class="spoiler-overlay">
-                <div class="spoiler-blur">{{ comment.content }}</div>
-                <span class="overlay-text" onclick="revealSpoiler(this)">Click to reveal spoiler</span>
-            </div>
-            <div class="mt-1 text-xs text-red-500">
-                AI: spoiler (confidence: {{ comment.confidence }}) — {{ comment.ai_reason }}
-            </div>
+            <article class="comment comment--spoiler">
+                <div class="spoiler">
+                    <div class="spoiler__head">
+                        <span class="spoiler-badge">剧透</span>
+                    </div>
+                    <p class="spoiler-blur">{{ comment.content }}</p>
+                    <button class="spoiler-toggle" type="button" aria-expanded="false">展开</button>
+                </div>
+            </article>
             {% elif comment.status == "PENDING_REVIEW" %}
-            <div class="bg-yellow-50 border-yellow-200 rounded p-2">
-                <p class="text-yellow-800">{{ comment.content }}</p>
-                <p class="text-xs text-yellow-600 mt-1">
-                    Pending review (confidence: {{ comment.confidence }}) — {{ comment.ai_reason }}
-                </p>
-            </div>
+            {# Pending comments are still in moderation: never show the text,
+               otherwise an unreviewed spoiler would leak before a human sees it. #}
+            <article class="comment comment--pending">
+                <p>该评论正在 AI 审核中，通过后会公开。</p>
+            </article>
             {% else %}
-            <p class="text-gray-800">{{ comment.content }}</p>
+            <article class="comment">
+                <p>{{ comment.content }}</p>
+            </article>
             {% endif %}
-        </div>
         {% endfor %}
+
         {% if not comments %}
-        <p class="text-gray-400 text-sm">No comments yet.</p>
+        <p class="empty">暂无评论，来写第一条。</p>
         {% endif %}
     </div>
 
-    <form hx-post="/comment" hx-target="#comment-sidebar" hx-swap="innerHTML"
-          class="space-y-3">
+    <form class="comment-form" action="/comment" method="post" data-comment-form>
         <input type="hidden" name="book_id" value="{{ book_id }}">
         <input type="hidden" name="para_index" value="{{ para_index }}">
-        <textarea name="content" rows="3" required
-                  class="w-full border rounded px-3 py-2 focus:ring-indigo-500"
-                  placeholder="Write your comment..."></textarea>
-        <button type="submit"
-                class="bg-indigo-600 text-white rounded px-4 py-2 hover:bg-indigo-700">
-            Post Comment
-        </button>
+        <label class="sr-only" for="comment-content">评论内容</label>
+        <textarea id="comment-content" name="content" rows="3" required
+                  maxlength="{{ max_comment_chars|default(500) }}"
+                  placeholder="写下你的评论…"></textarea>
+        <p class="form-error" data-comment-error role="alert" hidden></p>
+        <div class="comment-form__foot">
+            <span class="hint">AI 会判断是否剧透</span>
+            <button class="btn btn--primary" type="submit">发送评论</button>
+        </div>
     </form>
 </div>

@@ -1,58 +1,100 @@
 {% extends "base.html" %}
-{% block title %}SpoilerShield - Admin{% endblock %}
+{% block title %}审核后台 · SpoilerShield{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto mt-6">
-    <h1 class="text-2xl font-bold mb-6">Admin Panel — Pending Review Comments</h1>
+<div class="wrap admin">
+    <header class="admin__head">
+        <h1 class="display">审核后台</h1>
+        <p class="lede">审核 AI 没有把握的评论，管理已经上传的书籍。</p>
+    </header>
 
-    {% if comments %}
-    <div class="space-y-4">
+    <section class="admin-section" aria-labelledby="books-title">
+        <div class="section-head">
+            <h2 class="section-title" id="books-title">书籍管理</h2>
+            {% if books %}<span class="count">{{ books|length }} 本</span>{% endif %}
+        </div>
+        {% if books %}
+        <ul class="admin-list">
+            {% for book in books %}
+            <li class="admin-row">
+                <span class="admin-row__main">
+                    <span class="admin-row__title">{{ book.title }}</span>
+                    <span class="admin-row__meta">{{ book.total_paragraphs }} 段 · ID {{ book.id }}</span>
+                </span>
+                <form method="post" action="/admin/delete_book/{{ book.id }}"
+                      data-title="{{ book.title }}"
+                      onsubmit="return confirm('删除《' + this.dataset.title + '》及其全部评论？');">
+                    <button class="btn btn--danger btn--sm" type="submit">删除</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">还没有上传书籍。</p>
+        {% endif %}
+    </section>
+
+    <section class="admin-section" aria-labelledby="pending-title">
+        <div class="section-head">
+            <h2 class="section-title" id="pending-title">待审核评论</h2>
+            <span class="count">{{ comments|length }} 条待审</span>
+        </div>
+        {% if comments %}
         {% for comment in comments %}
-        <div class="bg-white shadow rounded-lg p-4">
-            <div class="flex justify-between items-start mb-2">
-                <span class="text-sm text-gray-500">
-                    Book: {{ comment.book.title }} | Paragraph #{{ comment.paragraph.para_index }}
+        <article class="pending">
+            <header class="pending__head">
+                <span class="pending__where">
+                    {{ comment.book.title }} · 第 {{ comment.paragraph.para_index + 1 }} 段
                 </span>
-                <span class="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">
-                    Pending Review
-                </span>
-            </div>
+                <span class="badge badge--warn">待审核</span>
+            </header>
 
-            <p class="text-gray-800 mb-2">{{ comment.content }}</p>
+            <p class="pending__content">{{ comment.content }}</p>
 
-            <div class="bg-gray-50 rounded p-2 mb-3 text-sm">
-                <p><strong>AI Judgment:</strong> {{ "Spoiler" if comment.is_spoiler else "Non-spoiler" }}</p>
-                <p><strong>Confidence:</strong> {{ comment.confidence }}</p>
-                <p><strong>Reason:</strong> {{ comment.ai_reason }}</p>
-            </div>
+            <dl class="ai-meta">
+                <div>
+                    <dt>AI 判断</dt>
+                    <dd>
+                        {% if comment.is_spoiler is none %}不可用
+                        {% elif comment.is_spoiler %}剧透
+                        {% else %}非剧透{% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt>置信度</dt>
+                    <dd>
+                        {% if comment.confidence is none %}—
+                        {% else %}{{ "%.0f"|format(comment.confidence * 100) }}%{% endif %}
+                    </dd>
+                </div>
+                <div class="ai-meta__reason">
+                    <dt>理由</dt>
+                    <dd>{{ comment.ai_reason or "—" }}</dd>
+                </div>
+            </dl>
 
-            <div class="flex gap-2">
-                <form hx-post="/admin/action" hx-target="body" hx-swap="innerHTML" class="inline">
+            <div class="pending__actions">
+                <form method="post" action="/admin/action">
                     <input type="hidden" name="comment_id" value="{{ comment.id }}">
                     <input type="hidden" name="action" value="approve">
-                    <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">
-                        Approve (Public)
-                    </button>
+                    <button class="btn btn--primary btn--sm" type="submit">通过并公开</button>
                 </form>
-                <form hx-post="/admin/action" hx-target="body" hx-swap="innerHTML" class="inline">
+                <form method="post" action="/admin/action">
                     <input type="hidden" name="comment_id" value="{{ comment.id }}">
                     <input type="hidden" name="action" value="mark_spoiler">
-                    <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">
-                        Mark as Spoiler
-                    </button>
+                    <button class="btn btn--quiet btn--sm" type="submit">标记为剧透</button>
                 </form>
-                <form hx-post="/admin/action" hx-target="body" hx-swap="innerHTML" class="inline">
+                <form method="post" action="/admin/action"
+                      onsubmit="return confirm('删除这条评论？');">
                     <input type="hidden" name="comment_id" value="{{ comment.id }}">
                     <input type="hidden" name="action" value="delete">
-                    <button type="submit" class="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700">
-                        Delete
-                    </button>
+                    <button class="btn btn--danger btn--sm" type="submit">删除</button>
                 </form>
             </div>
-        </div>
+        </article>
         {% endfor %}
-    </div>
-    {% else %}
-    <p class="text-gray-400 text-center mt-10">No pending review comments.</p>
-    {% endif %}
+        {% else %}
+        <p class="empty">没有待审核的评论。</p>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

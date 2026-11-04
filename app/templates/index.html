@@ -1,37 +1,73 @@
 {% extends "base.html" %}
-{% block title %}SpoilerShield - Upload{% endblock %}
+{% block title %}SpoilerShield · 上传书籍{% endblock %}
 {% block content %}
-<div class="max-w-md mx-auto mt-10">
-    <h1 class="text-2xl font-bold mb-6 text-center">Upload a Book</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data"
-          class="bg-white shadow rounded-lg p-6 space-y-4">
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Book Title</label>
-            <input type="text" name="title" required
-                   class="w-full border rounded px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
+<div class="wrap">
+    <div class="home">
+        <section class="home__intro" aria-labelledby="home-title">
+            <h1 class="display" id="home-title">上传一本书</h1>
+            <p class="lede">
+                上传一本书，按段落阅读，在段落旁边讨论。AI 会判断评论是否剧透了后面的情节，
+                并在你读到那里之前把它挡住。
+            </p>
+            <ul class="facts">
+                <li>段落级评论</li>
+                <li>剧透自动遮挡</li>
+                <li>低置信度转人工</li>
+            </ul>
+        </section>
+
+        <section class="home__upload" aria-labelledby="upload-title">
+            <h2 class="section-title" id="upload-title">
+                {% if allow_uploads %}选择文件{% else %}只读演示{% endif %}
+            </h2>
+            {% if allow_uploads %}
+            <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                <div class="field">
+                    <label for="book-title">书名</label>
+                    <input class="input" type="text" id="book-title" name="title" maxlength="200"
+                           autocomplete="off" placeholder="留空则使用文件名">
+                </div>
+                <div class="field">
+                    <label for="book-file">文件（PDF / EPUB / TXT）</label>
+                    <input type="file" id="book-file" name="file" accept=".pdf,.epub,.txt" required>
+                    <p class="hint">单文件最大 20 MB，最多 5000 段。首次使用需加载本地向量模型。</p>
+                </div>
+                <button class="btn btn--primary" type="submit">上传并解析</button>
+            </form>
+            {% else %}
+            <p class="lede">当前部署已关闭上传，只能阅读和评论已有书籍。</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="library" aria-labelledby="library-title">
+        <div class="section-head">
+            <h2 class="section-title" id="library-title">我的书架</h2>
+            {% if books %}<span class="count">{{ books|length }} 本</span>{% endif %}
         </div>
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">File (PDF, EPUB, TXT)</label>
-            <input type="file" name="file" accept=".pdf,.epub,.txt" required
-                   class="w-full border rounded px-3 py-2">
-        </div>
-        <button type="submit"
-                class="w-full bg-indigo-600 text-white rounded px-4 py-2 hover:bg-indigo-700">
-            Upload & Parse
-        </button>
-    </form>
-    {% if books %}
-    <div class="mt-8">
-        <h2 class="text-lg font-semibold mb-3">Your Books</h2>
-        <ul class="space-y-2">
+        {% if books %}
+        <ul class="book-list">
             {% for book in books %}
-            <li class="bg-white shadow rounded p-3 flex justify-between items-center">
-                <span>{{ book.title }} ({{ book.file_type }})</span>
-                <a href="/book/{{ book.id }}" class="text-indigo-600 hover:underline">Read</a>
+            <li>
+                <a class="book-row" href="/book/{{ book.id }}">
+                    <span class="book-row__main">
+                        <span class="book-row__title">{{ book.title }}</span>
+                        <span class="book-row__meta">{{ book.file_type }} · {{ book.total_paragraphs }} 段</span>
+                    </span>
+                    <span class="book-row__go">
+                        阅读
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M5 12h14M13 6l6 6-6 6"/>
+                        </svg>
+                    </span>
+                </a>
             </li>
             {% endfor %}
         </ul>
-    </div>
-    {% endif %}
+        {% else %}
+        <p class="empty">还没有书。上传第一本，就能开始按段落阅读和评论。</p>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

@@ -1,0 +1,41 @@
+name: spoilershield
+
+services:
+  app:
+    build:
+      context: .
+    image: spoilershield:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Container paths; the volume is the only state that must survive rebuilds.
+      DATABASE_URL: sqlite:////data/spoiler_shield.db
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - app-data:/data
+    expose:
+      - "8000"
+    # If you put your own Nginx in front instead of Caddy, publish only to the
+    # loopback interface: 127.0.0.1:8000:8000
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env, e.g. books.example.com}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  app-data:
+  caddy-data:
+  caddy-config:

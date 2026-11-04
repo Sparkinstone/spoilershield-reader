@@ -1,68 +1,119 @@
 {% extends "base.html" %}
-{% block title %}SpoilerShield - {{ book.title }}{% endblock %}
+{% block title %}{{ book.title }} · SpoilerShield{% endblock %}
+{% block body_class %}reader-page{% endblock %}
+{% block main_class %}reader-main{% endblock %}
 {% block content %}
-<div class="flex gap-6 h-[calc(100vh-80px)]">
-    <!-- Left: Book text -->
-    <div class="w-1/2 overflow-y-auto bg-white shadow rounded-lg p-6" id="book-text">
-        <h2 class="text-xl font-bold mb-4">{{ book.title }}</h2>
-        <div id="paragraphs">
+<div class="reader" data-book-id="{{ book.id }}">
+    <header class="reader-bar">
+        <div class="reader-bar__inner">
+            <a class="icon-btn" href="/" aria-label="返回书架">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 12H5M11 6l-6 6 6 6"/>
+                </svg>
+                <span class="reader-bar__back-label">书架</span>
+            </a>
+            {% if toc %}
+            <button class="icon-btn" type="button" data-toc-open aria-controls="toc-drawer" aria-expanded="false">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h10"/>
+                </svg>
+                目录
+            </button>
+            {% endif %}
+
+            <h1 class="reader-bar__title" title="{{ book.title }}">{{ book.title }}</h1>
+            <span class="reader-bar__meta">{{ paragraphs|length }} 段</span>
+        </div>
+    </header>
+
+    <div class="reading-wrap">
+        <p class="reading-hint" data-reading-hint>点击任意段落，查看或发表评论</p>
+        <div class="reading-column" id="paragraphs">
             {% for para in paragraphs %}
-            <div class="paragraph-block mb-4 p-3 rounded cursor-pointer hover:bg-indigo-50 transition"
-                 id="para-{{ para.para_index }}"
-                 hx-get="/book/{{ book.id }}/comments/{{ para.para_index }}"
-                 hx-target="#comment-sidebar"
-                 hx-swap="innerHTML"
-                 onclick="selectParagraph({{ para.para_index }})">
-                {% if para.page_num %}
-                <span class="text-xs text-gray-400 mr-2">p.{{ para.page_num }}</span>
+            <article class="paragraph" id="para-{{ para.para_index }}"
+                     data-para-index="{{ para.para_index }}"
+                     data-comment-trigger
+                     role="button" tabindex="0"
+                     aria-haspopup="dialog"
+                     aria-label="第 {{ para.para_index + 1 }} 段，查看或发表评论">
+                {% if comment_counts.get(para.id) %}
+                <span class="comment-count" title="{{ comment_counts.get(para.id) }} 条评论">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/>
+                    </svg>
+                    <span data-comment-count>{{ comment_counts.get(para.id) }}</span> 条评论
+                </span>
                 {% endif %}
-                <span class="text-sm text-gray-500 mr-2">[{{ para.para_index }}]</span>
-                <p class="text-gray-800 leading-relaxed">{{ para.content }}</p>
-            </div>
+                <p class="paragraph__text">{{ para.content }}</p>
+            </article>
             {% endfor %}
+
+            {% if not paragraphs %}
+            <p class="empty">这本书还没有解析出段落。</p>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Right: Comment sidebar -->
-    <div class="w-1/2 overflow-y-auto bg-white shadow rounded-lg p-6" id="comment-sidebar">
-        <div class="text-center text-gray-400 mt-20">
-            <p>Click a paragraph to see comments</p>
+    <dialog class="comment-dialog" id="comment-dialog" aria-labelledby="comment-dialog-title">
+        <div class="comment-dialog__card">
+            <header class="comment-dialog__head">
+                <h2 id="comment-dialog-title">段评</h2>
+                <div class="comment-dialog__tools">
+                    <button class="btn btn--quiet btn--sm" type="button" data-toggle-spoilers
+                            aria-pressed="false" hidden>
+                        展开剧透
+                    </button>
+                    <button class="icon-btn" type="button" data-close-dialog aria-label="关闭评论">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                            <path d="M6 6l12 12M18 6 6 18"/>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+            <div class="comment-dialog__body" id="comment-dialog-content" tabindex="-1" aria-live="polite">
+                <p class="loading">选择段落查看评论。</p>
+            </div>
         </div>
-    </div>
+    </dialog>
+
+    {% if toc %}
+    <div class="toc-overlay" data-toc-overlay hidden></div>
+    <aside class="toc-drawer" id="toc-drawer" aria-label="目录" aria-hidden="true">
+        <div class="toc-drawer__head">
+            <h2>目录</h2>
+            <button class="icon-btn" type="button" data-toc-close aria-label="关闭目录">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6 6 18"/>
+                </svg>
+            </button>
+        </div>
+        <nav class="toc-nav" aria-label="章节">
+            {% for item in toc %}
+            <a class="toc-link depth-{{ item.depth if item.depth < 3 else 2 }}"
+               href="#para-{{ item.para_index }}" data-toc-link>{{ item.title }}</a>
+            {% endfor %}
+        </nav>
+    </aside>
+    <script type="application/json" id="toc-data">{{ toc|tojson }}</script>
+    {% endif %}
+
+    {% if toc and paragraphs %}
+    <footer class="reading-progress" aria-label="阅读进度">
+        <div class="reading-progress__inner">
+            <label class="sr-only" for="para-slider">阅读进度</label>
+            <span class="reading-progress__meta" id="para-label">第 1 / {{ paragraphs|length }} 段</span>
+            <input type="range" id="para-slider" min="0" max="{{ paragraphs|length - 1 }}" value="0" step="1">
+            <div class="chapter-nav">
+                <button class="btn btn--quiet btn--sm" type="button" data-chapter-prev>上一章</button>
+                <button class="btn btn--quiet btn--sm" type="button" data-chapter-next>下一章</button>
+            </div>
+        </div>
+    </footer>
+    {% endif %}
 </div>
-
-<!-- Global spoiler toggle -->
-<div class="fixed bottom-4 right-4">
-    <button id="spoiler-toggle" onclick="toggleAllSpoilers()"
-            class="bg-gray-800 text-white px-4 py-2 rounded shadow hover:bg-gray-700">
-        Show All Spoilers
-    </button>
-</div>
-
-<script>
-let spoilersVisible = false;
-
-function selectParagraph(index) {
-    document.querySelectorAll('.paragraph-block').forEach(el => el.classList.remove('bg-indigo-100'));
-    document.getElementById('para-' + index).classList.add('bg-indigo-100');
-}
-
-function toggleAllSpoilers() {
-    spoilersVisible = !spoilersVisible;
-    const btn = document.getElementById('spoiler-toggle');
-    btn.textContent = spoilersVisible ? 'Hide All Spoilers' : 'Show All Spoilers';
-    document.querySelectorAll('.spoiler-blur').forEach(el => {
-        if (spoilersVisible) el.classList.add('revealed');
-        else el.classList.remove('revealed');
-    });
-    document.querySelectorAll('.overlay-text').forEach(el => {
-        el.style.display = spoilersVisible ? 'none' : '';
-    });
-}
-
-function revealSpoiler(el) {
-    el.parentElement.querySelector('.spoiler-blur').classList.add('revealed');
-    el.style.display = 'none';
-}
-</script>
 {% endblock %}

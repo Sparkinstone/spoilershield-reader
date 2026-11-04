@@ -1,0 +1,171 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{amsmath}
+
+\geometry{margin=2.5cm}
+
+\title{\textbf{剧透检测系统准确率测试报告}\\
+\large 《球状闪电》评论剧透识别评估}
+\author{CommentMask / SpoilerShield}
+\date{2026 年 4 月 23 日}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+%------------------------------------------------------------
+\section{测试概述}
+
+本报告针对书籍《球状闪电》（book\_id = 9，共 2422 段），
+对剧透检测系统进行系统性准确率评估。
+测试数据由 Claude claude-sonnet-4-6 批量生成，检测由本系统 RAG + LLM 流水线执行。
+
+%------------------------------------------------------------
+\section{测试数据集}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{类别} & \textbf{预期数量} & \textbf{实际生成} \\
+\midrule
+剧透评论       & 300  & 292  \\
+非剧透评论     & 700  & 670  \\
+\midrule
+合计           & 1000 & 962  \\
+生成失败（跳过）& —   & 38   \\
+\bottomrule
+\end{tabular}
+\caption{测试集构成}
+\end{table}
+
+评论长度控制在 20--50 字（中文），从书籍前半部分（1211 段）随机抽取段落生成。
+
+%------------------------------------------------------------
+\section{检测流水线}
+
+\subsection{RAG 召回策略}
+
+\begin{enumerate}
+  \item \textbf{语义向量检索}（top-k = 5）：使用 \texttt{all-MiniLM-L6-v2} 模型对评论编码，
+        与段落预计算 embedding 做余弦相似度排序，最低准入阈值 $\text{similarity} \geq 0.45$。
+  \item \textbf{关键词频次检索}（top-k = 3）：统计中文字符在段落中的出现频次，
+        取频次最高的 3 段作为补充召回。
+  \item \textbf{合并去重}：两路结果合并，按 \texttt{para\_index} 去重。
+  \item \textbf{未来段落过滤}：仅保留 \texttt{para\_index > current\_para\_index} 的段落作为剧透上下文。
+  \item \textbf{上下文长度控制}：若未来段落总字数超过 1200 字，
+        则对每段提取关键词密度最高的 120 字片段（Snippet）传入 LLM。
+  \item \textbf{无上下文回退}：若两路召回均未通过准入阈值，
+        告知 LLM「未发现相关后续内容，请仅根据常识判断」。
+\end{enumerate}
+
+\subsection{LLM 判断}
+
+召回内容连同当前段落、评论文本，以 JSON 格式提示词发送至
+\texttt{claude-sonnet-4-6}，要求返回：
+
+\begin{itemize}
+  \item \texttt{is\_spoiler}：布尔值
+  \item \texttt{confidence}：0.0--1.0 置信度
+  \item \texttt{reason}：判断依据
+\end{itemize}
+
+置信度阈值 $\geq 0.7$ 时标记为 \texttt{HIDDEN}（剧透）或 \texttt{PUBLIC}（公开），
+否则标记为 \texttt{PENDING\_REVIEW}（待审核）。
+
+%------------------------------------------------------------
+\section{检测结果}
+
+\subsection{数据有效性}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{项目} & \textbf{数量} \\
+\midrule
+总评论数         & 1000 \\
+有效检测         & 813  \\
+跳过（生成失败） & 38   \\
+检测失败（网络）  & 147  \\
+检测失败（其他） & 2    \\
+\bottomrule
+\end{tabular}
+\caption{检测有效性统计}
+\end{table}
+
+共 187 条未获得有效结果，其中 147 条为网络连接错误（\texttt{Connection error}），
+38 条为评论生成阶段失败，均已从指标统计中排除。
+
+\subsection{混淆矩阵}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+ & \textbf{预测：剧透} & \textbf{预测：非剧透} \\
+\midrule
+\textbf{实际：剧透}   & TP = 264 & FN = 8 \\
+\textbf{实际：非剧透} & FP = 2   & TN = 539 \\
+\bottomrule
+\end{tabular}
+\caption{混淆矩阵（813 条有效样本）}
+\end{table}
+
+\subsection{性能指标}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{指标} & \textbf{数值} \\
+\midrule
+Accuracy（准确率）  & 98.8\% \\
+Precision（精确率） & 99.2\% \\
+Recall（召回率）    & 97.1\% \\
+F1 Score            & 98.1\% \\
+\bottomrule
+\end{tabular}
+\caption{剧透检测性能指标}
+\end{table}
+
+%------------------------------------------------------------
+\section{结果分析}
+
+\subsection{优势}
+
+\begin{itemize}
+  \item \textbf{极低误报率}（FP = 2，精确率 99.2\%）：系统几乎不会将正常评论误标为剧透，
+        用户体验友好。
+  \item \textbf{高召回率}（97.1\%）：仅有 8 条剧透评论漏报，
+        剧透防护效果显著。
+  \item \textbf{F1 = 98.1\%}：精确率与召回率均衡，整体性能优秀。
+\end{itemize}
+
+\subsection{不足与改进方向}
+
+\begin{itemize}
+  \item \textbf{网络稳定性}：147 条检测因网络错误失败（14.7\%），
+        建议增加重试机制（exponential backoff）。
+  \item \textbf{漏报分析}（FN = 8）：8 条剧透被判为非剧透，
+        可能原因是该评论内容与后续段落语义距离较远，RAG 未召回相关上下文，
+        LLM 仅凭常识判断时保守估计。可考虑扩大 top-k 或降低准入阈值。
+  \item \textbf{测试集偏差}：评论由 Claude 生成，与真实用户评论风格存在分布差异，
+        建议补充真实标注数据进行二次评估。
+\end{itemize}
+
+%------------------------------------------------------------
+\section{结论}
+
+在 813 条有效样本上，系统达到 \textbf{98.8\% 准确率}、\textbf{98.1\% F1}，
+剧透检测效果优异，适合在阅读平台中作为自动审核的主要手段。
+主要瓶颈在于网络连接稳定性，与模型判断能力无关。
+
+\end{document}
