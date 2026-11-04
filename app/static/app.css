@@ -293,6 +293,154 @@ svg {
     margin-top: 20px;
 }
 
+/* ------------------------------------------------------- upload progress */
+.upload-dialog {
+    width: min(30rem, calc(100vw - 32px));
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    overflow: visible;
+}
+
+.upload-dialog::backdrop {
+    background: rgba(33, 28, 22, 0.42);
+}
+
+.upload-dialog:focus,
+.upload-dialog:focus-visible,
+.upload-dialog h2:focus {
+    outline: none;
+}
+
+.upload-dialog__card {
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 32px 80px -40px rgba(20, 16, 12, 0.6);
+    animation: dialog-rise 0.22s var(--ease-out);
+}
+
+.upload-dialog__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.upload-dialog__eyebrow {
+    margin-bottom: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.upload-dialog h2 {
+    font-family: var(--font-read);
+    font-size: 1.4rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+
+.upload-dialog__percent {
+    padding-top: 4px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-strong);
+    white-space: nowrap;
+}
+
+.upload-progress {
+    position: relative;
+    height: 8px;
+    margin: 22px 0 14px;
+    background: var(--surface-soft);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.upload-progress__bar {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--accent);
+    transition: width 0.18s var(--ease-out);
+}
+
+.upload-progress[data-indeterminate="true"] .upload-progress__bar {
+    width: 34% !important;
+    transition: none;
+    animation: upload-slide 1.25s ease-in-out infinite;
+}
+
+@keyframes upload-slide {
+    0% {
+        transform: translateX(-120%);
+    }
+    100% {
+        transform: translateX(320%);
+    }
+}
+
+.upload-dialog__status {
+    font-size: 0.94rem;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+}
+
+.upload-dialog__hint {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--muted);
+}
+
+.upload-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.upload-dialog--error .upload-dialog__card {
+    border-color: #eccfcb;
+}
+
+.upload-dialog__error-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 14px;
+    border-radius: 50%;
+    background: var(--danger-wash);
+    color: var(--danger);
+}
+
+.upload-dialog--error h2 {
+    margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+    .upload-dialog {
+        width: calc(100vw - 24px);
+    }
+
+    .upload-dialog__card {
+        padding: 20px;
+    }
+
+    .upload-dialog__actions .btn {
+        flex: 1;
+    }
+}
+
 .field {
     display: grid;
     gap: 8px;

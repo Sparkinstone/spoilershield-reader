@@ -342,4 +342,146 @@
             }
         });
     }
+
+    /* ------------------------------------------------------------ upload */
+    const uploadForm = $("[data-upload-form]");
+    const uploadDialog = $("#upload-dialog");
+    const uploadErrorDialog = $("#upload-error-dialog");
+
+    if (uploadForm && uploadDialog && uploadErrorDialog) {
+        const submitButton = $("[data-upload-submit]", uploadForm);
+        const progress = $("[data-upload-progress]", uploadDialog);
+        const bar = $("[data-upload-bar]", uploadDialog);
+        const percent = $("[data-upload-percent]", uploadDialog);
+        const status = $("[data-upload-status]", uploadDialog);
+        const errorText = $("[data-upload-error]", uploadErrorDialog);
+        const closeButton = $("[data-upload-close]", uploadErrorDialog);
+        const retryButton = $("[data-upload-retry]", uploadErrorDialog);
+        let uploading = false;
+
+        function resetUploadUi() {
+            uploading = true;
+            progress.dataset.indeterminate = "false";
+            progress.setAttribute("aria-valuenow", "0");
+            bar.style.width = "0%";
+            percent.textContent = "0%";
+            status.textContent = "正在上传文件…";
+            if (submitButton) submitButton.disabled = true;
+        }
+
+        function setIndeterminate() {
+            progress.dataset.indeterminate = "true";
+            progress.removeAttribute("aria-valuenow");
+            percent.textContent = "处理中";
+            status.textContent = "文件已上传，正在解析段落并生成向量…";
+        }
+
+        function finishUpload() {
+            uploading = false;
+            if (submitButton) submitButton.disabled = false;
+        }
+
+        function failureMessage(request) {
+            let message = "";
+            try {
+                const payload = JSON.parse(request.responseText);
+                if (payload && payload.detail) message = String(payload.detail);
+            } catch (ignored) {
+                /* Nginx/proxy HTML error page */
+            }
+            if (message) return message;
+            if (request.status === 0) return "网络连接中断，请检查网络后重试。";
+            if (request.status === 413) return "文件超过大小限制，请换一个更小的文件。";
+            if (request.status === 502 || request.status === 504) {
+                return "服务器处理超时或暂时不可用，请稍后重试。";
+            }
+            return `上传失败（HTTP ${request.status}），请稍后重试。`;
+        }
+
+        function showFailure(message) {
+            finishUpload();
+            if (uploadDialog.open) uploadDialog.close();
+            errorText.textContent = message || "上传失败，请稍后重试。";
+            if (!uploadErrorDialog.open) uploadErrorDialog.showModal();
+            const title = $("#upload-error-title", uploadErrorDialog);
+            if (title) title.focus({ preventScroll: true });
+        }
+
+        uploadForm.addEventListener("submit", (event) => {
+            if (!window.FormData || !window.XMLHttpRequest) return; // native fallback
+            event.preventDefault();
+
+            const fileInput = $('input[type="file"]', uploadForm);
+            if (!fileInput || !fileInput.files || !fileInput.files.length) {
+                if (fileInput) fileInput.reportValidity();
+                return;
+            }
+            if (uploading) return;
+
+            resetUploadUi();
+            uploadDialog.showModal();
+
+            const request = new XMLHttpRequest();
+            request.open("POST", uploadForm.action, true);
+            request.timeout = 10 * 60 * 1000;
+
+            request.upload.addEventListener("progress", (progressEvent) => {
+                if (!progressEvent.lengthComputable) return;
+                const value = Math.min(
+                    100,
+                    Math.round((progressEvent.loaded / progressEvent.total) * 100)
+                );
+                progress.dataset.indeterminate = "false";
+                progress.setAttribute("aria-valuenow", String(value));
+                bar.style.width = `${value}%`;
+                percent.textContent = `${value}%`;
+                status.textContent =
+                    value >= 100 ? "文件已上传，正在解析…" : "正在上传文件…";
+            });
+
+            request.upload.addEventListener("load", () => setIndeterminate());
+
+            request.addEventListener("load", () => {
+                if (request.status >= 200 && request.status < 400) {
+                    finishUpload();
+                    window.location.assign(
+                        request.responseURL || window.location.href
+                    );
+                    return;
+                }
+                showFailure(failureMessage(request));
+            });
+
+            request.addEventListener("error", () => {
+                showFailure("网络连接中断，请检查网络后重试。");
+            });
+            request.addEventListener("timeout", () => {
+                showFailure("服务器处理时间过长，请稍后重试。");
+            });
+            request.addEventListener("abort", () => finishUpload());
+
+            request.send(new FormData(uploadForm));
+        });
+
+        uploadDialog.addEventListener("cancel", (event) => {
+            if (uploading) event.preventDefault();
+        });
+
+        closeButton.addEventListener("click", () => {
+            uploadErrorDialog.close();
+            const fileInput = $('input[type="file"]', uploadForm);
+            if (fileInput) fileInput.focus();
+        });
+
+        retryButton.addEventListener("click", () => {
+            uploadErrorDialog.close();
+            uploadForm.requestSubmit();
+        });
+
+        window.addEventListener("beforeunload", (event) => {
+            if (!uploading) return;
+            event.preventDefault();
+            event.returnValue = "";
+        });
+    }
 })();
