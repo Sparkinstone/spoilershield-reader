@@ -21,7 +21,8 @@
                 {% if allow_uploads %}选择文件{% else %}只读演示{% endif %}
             </h2>
             {% if allow_uploads %}
-            <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+            <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data"
+                  data-upload-form>
                 <div class="field">
                     <label for="book-title">书名</label>
                     <input class="input" type="text" id="book-title" name="title" maxlength="200"
@@ -32,8 +33,47 @@
                     <input type="file" id="book-file" name="file" accept=".pdf,.epub,.txt" required>
                     <p class="hint">单文件最大 20 MB，最多 5000 段。首次使用需加载本地向量模型。</p>
                 </div>
-                <button class="btn btn--primary" type="submit">上传并解析</button>
+                <button class="btn btn--primary" type="submit" data-upload-submit>上传并解析</button>
             </form>
+
+            <dialog class="upload-dialog" id="upload-dialog" aria-labelledby="upload-dialog-title">
+                <div class="upload-dialog__card">
+                    <header class="upload-dialog__head">
+                        <div>
+                            <p class="upload-dialog__eyebrow">Upload</p>
+                            <h2 id="upload-dialog-title">正在上传</h2>
+                        </div>
+                        <span class="upload-dialog__percent" data-upload-percent>0%</span>
+                    </header>
+                    <div class="upload-progress" data-upload-progress role="progressbar"
+                         aria-label="上传进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div class="upload-progress__bar" data-upload-bar></div>
+                    </div>
+                    <p class="upload-dialog__status" data-upload-status aria-live="polite">正在上传文件…</p>
+                    <p class="upload-dialog__hint">上传完成后会解析段落并生成向量，首次处理可能需要几分钟。</p>
+                </div>
+            </dialog>
+
+            <dialog class="upload-dialog upload-dialog--error" id="upload-error-dialog"
+                    aria-labelledby="upload-error-title">
+                <div class="upload-dialog__card">
+                    <div class="upload-dialog__error-icon" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                             stroke-linejoin="round">
+                            <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>
+                            <path d="M12 9v4M12 17h.01"/>
+                        </svg>
+                    </div>
+                    <h2 id="upload-error-title" tabindex="-1">上传失败</h2>
+                    <p class="upload-dialog__status" data-upload-error role="alert"></p>
+                    <p class="upload-dialog__hint">可以检查文件后重试；如果提示服务异常，请稍后再试。</p>
+                    <div class="upload-dialog__actions">
+                        <button class="btn btn--quiet" type="button" data-upload-close>关闭</button>
+                        <button class="btn btn--primary" type="button" data-upload-retry>重试</button>
+                    </div>
+                </div>
+            </dialog>
             {% else %}
             <p class="lede">当前部署已关闭上传，只能阅读和评论已有书籍。</p>
             {% endif %}

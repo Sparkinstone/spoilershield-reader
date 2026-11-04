@@ -27,6 +27,16 @@ def test_home_lists_upload_form(client):
     assert "上传一本书" in response.text
 
 
+def test_home_has_upload_progress_and_failure_dialogs(client):
+    html = client.get("/").text
+
+    assert "data-upload-form" in html
+    assert 'id="upload-dialog"' in html
+    assert 'id="upload-error-dialog"' in html
+    assert 'role="progressbar"' in html
+    assert "data-upload-error" in html
+
+
 def test_pages_do_not_depend_on_external_assets(client, seeded_book):
     book, _ = seeded_book
     for path in ("/", f"/book/{book.id}", "/admin"):
@@ -113,6 +123,7 @@ def test_home_hides_the_upload_form_when_disabled(client, monkeypatch):
 
     assert "关闭上传" in html
     assert 'action="/upload"' not in html
+    assert 'id="upload-dialog"' not in html
 
 
 def test_upload_rejects_empty_file(client):
